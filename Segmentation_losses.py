@@ -74,3 +74,28 @@ class FocalTverskyLoss(nn.Module):
         FocalTversky = (1 - Tversky)**gamma
                        
         return FocalTversky
+
+# for boundaries ###
+def mask_to_boundary(mask):
+
+    h, w = mask.shape
+    new_mask = cv2.copyMakeBorder(mask, 1, 1, 1, 1, cv2.BORDER_CONSTANT, value=0)
+    kernel = np.ones((3, 3), dtype=np.uint8)
+    new_mask_erode = cv2.erode(new_mask, kernel, iterations=5)
+    mask_erode = new_mask_erode[1 : h + 1, 1 : w + 1]
+    return mask - mask_erode
+class IoULoss_b(nn.Module):
+    def __init__(self, weight=None, size_average=True):
+        super(IoULoss_b, self).__init__()
+
+    def forward(self, inputs, targets, smooth=1):
+        
+        inputs=mask_to_boundary(inputs)
+        targets=mask_to_boundary(targets)
+        #inputs = inputs.view(-1)
+        #targets = targets.view(-1)
+        intersection = (inputs * targets).sum()
+        total = (inputs + targets).sum()
+        union = total - intersection   
+        IoU = (intersection + smooth)/(union + smooth)          
+        return 1 - IoU
